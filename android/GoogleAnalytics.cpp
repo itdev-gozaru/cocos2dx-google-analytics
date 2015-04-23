@@ -67,7 +67,7 @@ public:
   }
 
   void setCustomDimension(int index, const std::string& value) {
-    // @todo 実装
+    Java_org_cocos2dx_lib_Cocos2dxGoogleAnalytics_setCustomDimensionJni(index, value);
   }
 
   void sendScreen(const std::string& screen)  {

@@ -85,4 +85,20 @@ void Java_org_cocos2dx_lib_Cocos2dxGoogleAnalytics_sendEventJni(const std::strin
   t.env->DeleteLocalRef(jLabel);
   t.env->DeleteLocalRef(t.classID);
 }
+
+void Java_org_cocos2dx_lib_Cocos2dxGoogleAnalytics_setCustomDimensionJni(int index, const std::string& value) {
+  cocos2d::JniMethodInfo t;
+  if (!cocos2d::JniHelper::getStaticMethodInfo(t,
+                                               "org/cocos2dx/lib/Cocos2dxGoogleAnalytics",
+                                               "setCustomDimension",
+                                               "(I;Ljava/lang/String;)V")) {
+    LOGD("Failed to find static method of setCustomDimension");
+    return;
+  }
+  jstring jValue = t.env->NewStringUTF(value.c_str());
+  t.env->CallStaticVoidMethod(t.classID, t.methodID, (int) index, jValue);
+  t.env->DeleteLocalRef(jValue);
+  t.env->DeleteLocalRef(t.classID);
+}
+
 }

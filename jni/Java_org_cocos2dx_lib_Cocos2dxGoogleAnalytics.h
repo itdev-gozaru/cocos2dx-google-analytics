@@ -15,4 +15,5 @@ extern "C" {
                                                                     const std::string& action,
                                                                     const std::string& label,
                                                                     long value);
+    void Java_org_cocos2dx_lib_Cocos2dxGoogleAnalytics_setCustomDimensionJni(int index, const std::string& value);
 }

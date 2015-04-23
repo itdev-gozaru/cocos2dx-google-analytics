@@ -1,22 +1,11 @@
 package org.cocos2dx.lib;
 
-import java.util.HashMap;
-
-import com.google.analytics.tracking.android.ExceptionReporter;
-import com.google.analytics.tracking.android.Fields;
-import com.google.analytics.tracking.android.GAServiceManager;
-import com.google.analytics.tracking.android.GoogleAnalytics;
-import com.google.analytics.tracking.android.Logger.LogLevel;
-import com.google.analytics.tracking.android.MapBuilder;
-import com.google.analytics.tracking.android.Tracker;
-import com.google.tagmanager.protobuf.WireFormat.FieldType;
+import com.google.android.gms.analytics.ExceptionReporter;
+import com.google.android.gms.analytics.GoogleAnalytics;
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
 
 import android.app.Activity;
-import android.content.Intent;
-import android.net.Uri;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.util.Log;
 
 public class Cocos2dxGoogleAnalytics {
@@ -27,7 +16,8 @@ public class Cocos2dxGoogleAnalytics {
         private static boolean mTrackUncaughtExceptions = false;
         private static int mDispatchInterval = 20;
         private static int mLogLevel = 0;
-        
+        private static Tracker mTracker = null;
+
         private static void LOG(final String msg) {
                 Log.d(TAG, msg);
         }
@@ -55,76 +45,92 @@ public class Cocos2dxGoogleAnalytics {
         }
 
         public static void setDispatchInterval(final int dispatchInterval) {
-        	LOG("setDispatchInterval(" + dispatchInterval + ") called.");
+          LOG("setDispatchInterval(" + dispatchInterval + ") called.");
 
             mDispatchInterval = dispatchInterval;
         }
 
         public static void setLogLevel(final int logLevel) {
-        	LOG("setLogLevel(" + logLevel + ") called.");
+          LOG("setLogLevel(" + logLevel + ") called.");
 
             mLogLevel = logLevel;
         }
-        
+
         public static void setTrackerWithTrackingId(final String trackingId) {
-        	LOG("setTrackerWithTrackingId(" + trackingId + ") called.");
+          LOG("setTrackerWithTrackingId(" + trackingId + ") called.");
 
-        	if (getActivity() != null) {
-        		getActivity().runOnUiThread(new Runnable() {
-    				@Override
-    				public void run() {
-    	        		Tracker tracker = GoogleAnalytics.getInstance(getActivity()).getTracker(trackingId);
-    	        		GoogleAnalytics.getInstance(getActivity()).setDefaultTracker(tracker);
-    	        		
-    	        		// uncaught exceptin
-    	        		if (Cocos2dxGoogleAnalytics.mTrackUncaughtExceptions) {
-    	        		      ExceptionReporter reporter = new ExceptionReporter(tracker, GAServiceManager.getInstance(),
-    	        		    		  Thread.getDefaultUncaughtExceptionHandler(), getActivity());
-    	        		      Thread.setDefaultUncaughtExceptionHandler(reporter);
-    	        		}
-    	        		
-    	        		// dispatch period
-    	        		GAServiceManager.getInstance().setLocalDispatchPeriod(Cocos2dxGoogleAnalytics.mDispatchInterval);
-    	        		
-    	        		// log level
-    	        		LogLevel settingLevel = LogLevel.WARNING;
-    	        		LogLevel[] levels = LogLevel.values();
-    	        		for (LogLevel level : levels) {
-    	        			if (level.ordinal() == Cocos2dxGoogleAnalytics.mLogLevel) {
-    	        				settingLevel = level;
-    	        			}
-    	        		}
-    	        		GoogleAnalytics.getInstance(getActivity()).getLogger().setLogLevel(settingLevel);
-    				}
-    			});
-        	}
+          if (getActivity() != null) {
+            getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                  mTracker = GoogleAnalytics.getInstance(getActivity()).newTracker(trackingId);
+                  
+                  // uncaught exceptin
+                  if (Cocos2dxGoogleAnalytics.mTrackUncaughtExceptions) {
+                        ExceptionReporter reporter = new ExceptionReporter(mTracker,
+                        		Thread.getDefaultUncaughtExceptionHandler(),
+                        		getActivity());
+                        Thread.setDefaultUncaughtExceptionHandler(reporter);
+                  }
+
+                  // dispatch period
+                  GoogleAnalytics.getInstance(getActivity()).setLocalDispatchPeriod(Cocos2dxGoogleAnalytics.mDispatchInterval);
+
+                  // log level
+                  GoogleAnalytics.getInstance(getActivity()).getLogger().setLogLevel(Cocos2dxGoogleAnalytics.mLogLevel);
+            }
+          });
+          }
         }
-        
+
         public static void sendScreen(final String screen) {
-        	LOG("sendScreen(" + screen + ") called.");
+          LOG("sendScreen(" + screen + ") called.");
 
-        	if (getActivity() != null) {
-        		getActivity().runOnUiThread(new Runnable() {
-    				@Override
-    				public void run() {
-    	        		Tracker tracker = GoogleAnalytics.getInstance(getActivity()).getDefaultTracker();
-    	        		tracker.send(MapBuilder.createAppView().set(Fields.SCREEN_NAME, screen).build());
-    				}
-    			});
-        	}
+          if (getActivity() != null) {
+            getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+            	if (mTracker != null) {
+                  mTracker.setScreenName(screen);
+                  mTracker.send(new HitBuilders.AppViewBuilder().build());
+            	}
+            }
+          });
+          }
         }
-        
-        public static void sendEvent(final String category, final String action, final String label, final int value) {
-        	LOG("sendEvent(" + category + ", " + action + ", " + label + ", " + value + ") called.");
 
-        	if (getActivity() != null) {
-        		getActivity().runOnUiThread(new Runnable() {
-    				@Override
-    				public void run() {
-    	        		Tracker tracker = GoogleAnalytics.getInstance(getActivity()).getDefaultTracker();
-    	        		tracker.send(MapBuilder.createEvent(category, action, label, (long) value).build());
-    				}
-    			});
-        	}
+        public static void sendEvent(final String category, final String action, final String label, final int value) {
+          LOG("sendEvent(" + category + ", " + action + ", " + label + ", " + value + ") called.");
+
+          if (getActivity() != null) {
+            getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                  if (mTracker != null) {
+                	  mTracker.send(new HitBuilders.EventBuilder()
+                      .setCategory(category)
+                      .setAction(action)
+                      .setLabel(label)
+                      .setValue(value)
+                      .build());
+                  }
+            }
+          });
+          }
+        }
+
+        public static void setCustomDimension(final int index, final String value) {
+          LOG("setCustomDimension(" + index + ", " + value + ") called.");
+
+          if (getActivity() != null) {
+            getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+            	if (mTracker != null) {
+                  mTracker.send(new HitBuilders.AppViewBuilder().setCustomDimension(index, value).build());
+            	}
+            }
+          });
+          }
         }
 }
